@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\TiketController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('home');
+Route::get('/tiket', [TiketController::class, 'cari'])->name('tiket.cari');
+Route::get('/tiket/{id}', [TiketController::class, 'detail'])
+    ->whereNumber('id')
+    ->name('tiket.detail');
 
 Route::get('/dashboard', function () {
     return view('dashboard');

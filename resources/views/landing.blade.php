@@ -5,7 +5,7 @@
 
     <div class="mx-auto max-w-6xl px-4 sm:px-8">
 
-        <x-landing.search-form />
+        <x-landing.search-form :action="route('tiket.cari')" />
 
         <section id="armada" class="py-10">
             <h2 class="text-xl font-bold">Kenali Armada Kami</h2>
