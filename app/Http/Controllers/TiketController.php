@@ -28,6 +28,25 @@ class TiketController extends Controller
         ]);
     }
 
+    public function kursi(Request $request, int $id): View
+    {
+        $pencarian = $request->validate([
+            'asal'      => ['required', 'string', 'max:100'],
+            'tujuan'    => ['required', 'string', 'max:100'],
+            'tanggal'   => ['required', 'date'],
+            'penumpang' => ['required', 'integer', 'min:1', 'max:5'],
+        ]);
+
+        $bus = $this->dataBus()->firstWhere('id', $id);
+        abort_if(! $bus, 404);
+
+        return view('tiket.kursi', [
+            'bus'           => $bus,
+            'pencarian'     => $pencarian,
+            'tanggalTampil' => Carbon::parse($pencarian['tanggal'])->locale('id')->translatedFormat('d F Y'),
+        ]);
+    }
+
     private function dataBus(): Collection
     {
         return collect([
@@ -43,6 +62,9 @@ class TiketController extends Controller
                 'terminal_asal' => 'Terminal Pulo Gebang',
                 'terminal_tujuan' => 'Terminal Giwangan',
                 'harga' => 250000,
+                'denah' => '2-2',
+                'kapasitas' => 28,
+                'kursi_terisi' => ['02', '07', '12'],
             ],
             [
                 'id' => 2,
@@ -56,6 +78,9 @@ class TiketController extends Controller
                 'terminal_asal' => 'Terminal Pulo Gebang',
                 'terminal_tujuan' => 'Terminal Giwangan',
                 'harga' => 320000,
+                'denah' => '1-1',
+                'kapasitas' => 18,
+                'kursi_terisi' => ['03'],
             ],
         ]);
     }

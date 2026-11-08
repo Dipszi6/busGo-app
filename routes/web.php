@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\TiketController;
+use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +11,13 @@ Route::get('/tiket', [TiketController::class, 'cari'])->name('tiket.cari');
 Route::get('/tiket/{id}', [TiketController::class, 'detail'])
     ->whereNumber('id')
     ->name('tiket.detail');
+Route::get('/tiket/{id}/kursi', [TiketController::class, 'kursi'])
+    ->whereNumber('id')
+    ->name('tiket.kursi');
+Route::get('/pemesanan/{id}/penumpang', [PemesananController::class, 'penumpang'])
+    ->whereNumber('id')
+    ->middleware('auth')
+    ->name('pemesanan.penumpang');
 
 Route::get('/dashboard', function () {
     return view('dashboard');

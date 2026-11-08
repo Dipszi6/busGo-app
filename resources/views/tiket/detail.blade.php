@@ -23,7 +23,7 @@
             </div>
 
             <x-tiket.trip-summary :asal="$pencarian['asal']" :tujuan="$pencarian['tujuan']" :tanggal="$tanggalTampil" :penumpang="$pencarian['penumpang']"
-                :harga="$bus['harga']" />
+                :harga="$bus['harga']" :href="route('tiket.kursi', ['id' => $bus['id']] + $pencarian)" />
         </div>
     </div>
 </x-layouts.public>
