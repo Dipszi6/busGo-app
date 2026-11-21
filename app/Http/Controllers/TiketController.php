@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class TiketController extends Controller
 {
@@ -103,6 +104,26 @@ class TiketController extends Controller
             'pencarian'     => $pencarian,
             'tanggalTampil' => Carbon::parse($pencarian['tanggal'])->locale('id')->translatedFormat('d F Y'),
         ]);
+    }
+
+    public function lanjutKursi(Request $request, int $id): RedirectResponse
+    {
+        $data = $request->validate([
+            'asal'      => ['required', 'string', 'max:100'],
+            'tujuan'    => ['required', 'string', 'max:100'],
+            'tanggal'   => ['required', 'date', 'after_or_equal:today'],
+            'penumpang' => ['required', 'integer', 'min:1', 'max:5'],
+            'kursi'     => ['required', 'array', 'size:' . (int) $request->input('penumpang')],
+            'kursi.*'   => ['string', 'regex:/^\d{2}$/', 'distinct'],
+        ]);
+
+        $request->session()->put('kursi_dipilih', [
+            'jadwal_id' => $id,
+            'pencarian' => \Illuminate\Support\Arr::only($data, ['asal', 'tujuan', 'tanggal', 'penumpang']),
+            'kursi'     => $data['kursi'],
+        ]);
+
+        return redirect()->route('pemesanan.penumpang', ['id' => $id]);
     }
 
     private function aturanPencarian(): array

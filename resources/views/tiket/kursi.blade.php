@@ -45,7 +45,15 @@
                 :harga="$bus['harga']" />
         </div>
 
-        <form action="{{ route('pemesanan.penumpang', ['id' => $bus['id']]) }}" method="GET" class="mt-6">
+        @if ($errors->has('kursi'))
+            <div class="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+                {{ $errors->first('kursi') }}
+            </div>
+        @endif
+
+        <form action="{{ route('tiket.kursi.lanjut', ['id' => $bus['id']]) }}" method="POST" class="mt-6">
+            @csrf
+
             @foreach ($pencarian as $nama => $nilai)
                 <input type="hidden" name="{{ $nama }}" value="{{ $nilai }}">
             @endforeach

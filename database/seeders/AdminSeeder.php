@@ -23,5 +23,14 @@ class AdminSeeder extends Seeder
             'role'              => 'admin',
             'email_verified_at' => now(),
         ])->save();
+        $penumpang = User::where('email', 'penumpang@busgo.test')->first() ?? new User();
+
+        $penumpang->forceFill([
+            'name'              => 'Penumpang BusGo',
+            'email'             => 'penumpang@busgo.test',
+            'password'          => Hash::make('password'),
+            'role'              => 'penumpang',
+            'email_verified_at' => now(),
+        ])->save();
     }
 }

@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Jadwal;
+use App\Models\Pemesanan;
+use App\Models\Penumpang;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -10,24 +14,27 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\View\View;
 
+
 class PemesananController extends Controller
 {
     public function penumpang(Request $request, int $id): View
     {
-        $data = $request->validate($this->aturanPilihan($request));
+        $sesi = $request->session()->get('kursi_dipilih');
+        abort_if(! $sesi || $sesi['jadwal_id'] !== $id, 404);
 
-        $bus = Jadwal::untukTampilan($id, $data['tanggal']);
+        $pencarian = $sesi['pencarian'];
+        $kursi     = $sesi['kursi'];
 
-        $pencarian = Arr::only($data, ['asal', 'tujuan', 'tanggal', 'penumpang']);
+        $bus = Jadwal::untukTampilan($id, $pencarian['tanggal']);
         $pencarian['asal']   = $bus['kota_asal'];
         $pencarian['tujuan'] = $bus['kota_tujuan'];
 
         return view('pemesanan.penumpang', [
             'bus'           => $bus,
             'pencarian'     => $pencarian,
-            'kursi'         => $data['kursi'],
-            'tanggalTampil' => Carbon::parse($data['tanggal'])->locale('id')->translatedFormat('d F Y'),
-            'total'         => $bus['harga'] * count($data['kursi']),
+            'kursi'         => $kursi,
+            'tanggalTampil' => Carbon::parse($pencarian['tanggal'])->locale('id')->translatedFormat('d F Y'),
+            'total'         => $bus['harga'] * count($kursi),
         ]);
     }
 
@@ -70,12 +77,104 @@ class PemesananController extends Controller
         return redirect()->route('pemesanan.ringkasan', ['id' => $bus['id']]);
     }
 
-    public function ringkasan(Request $request, int $id): JsonResponse
+    public function konfirmasi(Request $request, int $id): View
     {
         $pemesanan = $request->session()->get('pemesanan');
         abort_if(! $pemesanan || ($pemesanan['jadwal_id'] ?? null) !== $id, 404);
 
-        return response()->json($pemesanan, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $bus = Jadwal::untukTampilan($id, $pemesanan['pencarian']['tanggal']);
+
+        return view('pemesanan.konfirmasi', [
+            'bus'       => $bus,
+            'pemesanan' => $pemesanan,
+            'total'     => $bus['harga'] * count($pemesanan['kursi']),
+            'tanggalTampil' => Carbon::parse($pemesanan['pencarian']['tanggal'])
+                ->locale('id')->translatedFormat('d F Y'),
+        ]);
+    }
+
+    public function simpan(Request $request, int $id): RedirectResponse
+    {
+        $sesi = $request->session()->get('pemesanan');
+        abort_if(! $sesi || ($sesi['jadwal_id'] ?? null) !== $id, 404);
+
+        $bus    = Jadwal::untukTampilan($id, $sesi['pencarian']['tanggal']);
+        $tanggal = $sesi['pencarian']['tanggal'];
+        $kursi  = $sesi['kursi'];
+
+        $sudahTerisi = Penumpang::where('jadwal_id', $id)
+            ->where('tanggal_berangkat', $tanggal)
+            ->whereIn('nomor_kursi', $kursi)
+            ->pluck('nomor_kursi')
+            ->all();
+
+        if (! empty($sudahTerisi)) {
+            return redirect()
+                ->route('tiket.kursi', ['id' => $id] + $sesi['pencarian'])
+                ->withErrors(['kursi' => 'Kursi ' . implode(', ', $sudahTerisi) . ' baru saja dipesan orang lain. Silakan pilih kursi lain.']);
+        }
+
+        try {
+            $pemesanan = DB::transaction(function () use ($request, $id, $sesi, $bus, $tanggal, $kursi) {
+                $pemesanan = Pemesanan::create([
+                    'kode'             => Pemesanan::buatKode(),
+                    'user_id'          => $request->user()->id,
+                    'jadwal_id'        => $id,
+                    'tanggal_berangkat' => $tanggal,
+                    'total_harga'      => $bus['harga'] * count($kursi),
+                    'status'           => 'menunggu_pembayaran',
+                ]);
+
+                foreach ($kursi as $i => $nomor) {
+                    $pemesanan->penumpang()->create([
+                        'jadwal_id'         => $id,
+                        'tanggal_berangkat' => $tanggal,
+                        'nomor_kursi'       => $nomor,
+                        'nama'              => $sesi['penumpang'][$i]['nama'],
+                        'nik'               => $sesi['penumpang'][$i]['nik'],
+                        'telepon'           => $sesi['penumpang'][$i]['telepon'],
+                        'email'             => $sesi['penumpang'][$i]['email'],
+                        'jenis_kelamin'     => $sesi['penumpang'][$i]['jenis_kelamin'],
+                    ]);
+                }
+
+                return $pemesanan;
+            });
+        } catch (UniqueConstraintViolationException) {
+            return redirect()
+                ->route('tiket.kursi', ['id' => $id] + $sesi['pencarian'])
+                ->withErrors(['kursi' => 'Kursi yang kamu pilih baru saja dipesan orang lain. Silakan pilih kursi lain.']);
+        }
+
+        $request->session()->forget('pemesanan');
+
+        return redirect()->route('pemesanan.sukses', $pemesanan->kode);
+    }
+
+    public function ringkasan(Request $request, int $id): View
+    {
+        $pemesanan = $request->session()->get('pemesanan');
+        abort_if(! $pemesanan || ($pemesanan['jadwal_id'] ?? null) !== $id, 404);
+
+        $bus = Jadwal::untukTampilan($id, $pemesanan['pencarian']['tanggal']);
+
+        return view('pemesanan.konfirmasi', [
+            'bus'           => $bus,
+            'pemesanan'     => $pemesanan,
+            'total'         => $bus['harga'] * count($pemesanan['kursi']),
+            'tanggalTampil' => Carbon::parse($pemesanan['pencarian']['tanggal'])
+                ->locale('id')->translatedFormat('d F Y'),
+        ]);
+    }
+
+    public function sukses(Request $request, string $kode): View
+    {
+        $pemesanan = Pemesanan::with(['penumpang', 'jadwal.rute.terminalAsal.kota', 'jadwal.rute.terminalTujuan.kota', 'jadwal.bus'])
+            ->where('kode', $kode)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        return view('pemesanan.sukses', compact('pemesanan'));
     }
 
     private function aturanPilihan(Request $request): array
