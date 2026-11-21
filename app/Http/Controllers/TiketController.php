@@ -2,109 +2,54 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Jadwal;
+use App\Models\Kota;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class TiketController extends Controller
 {
-    public function detail(Request $request, int $id): View
-    {
-        $pencarian = $request->validate([
-            'asal'      => ['required', 'string', 'max:100'],
-            'tujuan'    => ['required', 'string', 'max:100'],
-            'tanggal'   => ['required', 'date'],
-            'penumpang' => ['required', 'integer', 'min:1', 'max:5'],
-        ]);
-
-        $bus = $this->dataBus()->firstWhere('id', $id);
-        abort_if(! $bus, 404);
-
-        return view('tiket.detail', [
-            'bus'           => $bus,
-            'pencarian'     => $pencarian,
-            'tanggalTampil' => Carbon::parse($pencarian['tanggal'])->locale('id')->translatedFormat('d F Y'),
-        ]);
-    }
-
-    public function kursi(Request $request, int $id): View
-    {
-        $pencarian = $request->validate([
-            'asal'      => ['required', 'string', 'max:100'],
-            'tujuan'    => ['required', 'string', 'max:100'],
-            'tanggal'   => ['required', 'date'],
-            'penumpang' => ['required', 'integer', 'min:1', 'max:5'],
-        ]);
-
-        $bus = $this->dataBus()->firstWhere('id', $id);
-        abort_if(! $bus, 404);
-
-        return view('tiket.kursi', [
-            'bus'           => $bus,
-            'pencarian'     => $pencarian,
-            'tanggalTampil' => Carbon::parse($pencarian['tanggal'])->locale('id')->translatedFormat('d F Y'),
-        ]);
-    }
-
-    private function dataBus(): Collection
-    {
-        return collect([
-            [
-                'id' => 1,
-                'nama' => 'Nusantara Executive',
-                'kelas' => 'Executive',
-                'fasilitas' => ['AC', 'WiFi Gratis', 'Reclining Seat', 'USB Charger', 'Bagasi'],
-                'deskripsi' => 'Armada nyaman untuk perjalanan jarak jauh.',
-                'berangkat' => '08:00',
-                'tiba' => '16:00',
-                'durasi' => '8 Jam',
-                'terminal_asal' => 'Terminal Pulo Gebang',
-                'terminal_tujuan' => 'Terminal Giwangan',
-                'harga' => 250000,
-                'denah' => '2-2',
-                'kapasitas' => 28,
-                'kursi_terisi' => ['02', '07', '12'],
-            ],
-            [
-                'id' => 2,
-                'nama' => 'Nusantara Sleeper',
-                'kelas' => 'Sleeper',
-                'fasilitas' => ['AC', 'WiFi Gratis', 'Bed Seat'],
-                'deskripsi' => 'Istirahat lebih nyaman di perjalanan.',
-                'berangkat' => '20:00',
-                'tiba' => '04:00',
-                'durasi' => '8 Jam',
-                'terminal_asal' => 'Terminal Pulo Gebang',
-                'terminal_tujuan' => 'Terminal Giwangan',
-                'harga' => 320000,
-                'denah' => '1-1',
-                'kapasitas' => 18,
-                'kursi_terisi' => ['03'],
-            ],
-        ]);
-    }
     public function cari(Request $request): View
     {
         $data = $request->validate([
-            'asal'      => ['required', 'string', 'max:100'],
-            'tujuan'    => ['required', 'string', 'max:100'],
-            'tanggal'   => ['required', 'date'],
+            'asal'      => ['required', 'string', 'max:100', Rule::exists('kota', 'nama')],
+            'tujuan'    => ['required', 'string', 'max:100', Rule::exists('kota', 'nama'), 'different:asal'],
+            'tanggal'   => ['required', 'date', 'after_or_equal:today'],
             'penumpang' => ['required', 'integer', 'min:1', 'max:5'],
             'waktu'     => ['nullable', 'array'],
             'waktu.*'   => ['in:pagi,siang,sore,malam'],
             'kelas'     => ['nullable', 'array'],
             'kelas.*'   => ['in:Executive,Sleeper'],
             'urut'      => ['nullable', 'in:termurah,termahal'],
+        ], [
+            'asal.required'          => 'Kota asal wajib dipilih.',
+            'asal.exists'            => 'Kota asal tidak tersedia.',
+            'tujuan.required'        => 'Kota tujuan wajib dipilih.',
+            'tujuan.exists'          => 'Kota tujuan tidak tersedia.',
+            'tujuan.different'       => 'Kota tujuan harus berbeda dengan kota asal.',
+            'tanggal.required'       => 'Tanggal berangkat wajib diisi.',
+            'tanggal.date'           => 'Format tanggal tidak valid.',
+            'tanggal.after_or_equal' => 'Tanggal berangkat tidak boleh sebelum hari ini.',
         ]);
 
-        $hasil = $this->dataBus();
+        $jumlah = (int) $data['penumpang'];
+
+        $hasil = Jadwal::with(['bus', 'rute.terminalAsal.kota', 'rute.terminalTujuan.kota'])
+            ->where('aktif', true)
+            ->whereHas('rute.terminalAsal.kota', fn($q) => $q->where('nama', $data['asal']))
+            ->whereHas('rute.terminalTujuan.kota', fn($q) => $q->where('nama', $data['tujuan']))
+            ->get()
+            ->map(fn(Jadwal $jadwal) => $jadwal->tampilan($data['tanggal']))
+            ->filter(fn($bus) => ($bus['kapasitas'] - count($bus['kursi_terisi'])) >= $jumlah)
+            ->values();
 
         $slotWaktu = fn(string $jam) => match (true) {
             $jam >= '06:00' && $jam < '11:00' => 'pagi',
             $jam >= '11:00' && $jam < '15:00' => 'siang',
             $jam >= '15:00' && $jam < '18:00' => 'sore',
-            $jam >= '18:00' || $jam < '06:00'  => 'malam',
+            default                           => 'malam',
         };
 
         if (! empty($data['waktu'])) {
@@ -118,14 +63,55 @@ class TiketController extends Controller
         $hasil = match ($data['urut'] ?? null) {
             'termurah' => $hasil->sortBy('harga'),
             'termahal' => $hasil->sortByDesc('harga'),
-            default    => $hasil,
+            default    => $hasil->sortBy('berangkat'),
         };
 
         return view('tiket.hasil', [
             'pencarian'     => $request->only(['asal', 'tujuan', 'tanggal', 'penumpang']),
             'filter'        => $request->only(['waktu', 'kelas', 'urut']),
             'hasil'         => $hasil->values(),
+            'kota'          => Kota::orderBy('nama')->pluck('nama'),
             'tanggalTampil' => Carbon::parse($data['tanggal'])->locale('id')->translatedFormat('d F Y'),
         ]);
+    }
+
+    public function detail(Request $request, int $id): View
+    {
+        $pencarian = $request->validate($this->aturanPencarian());
+
+        $bus = Jadwal::untukTampilan($id, $pencarian['tanggal']);
+        $pencarian['asal']   = $bus['kota_asal'];
+        $pencarian['tujuan'] = $bus['kota_tujuan'];
+
+        return view('tiket.detail', [
+            'bus'           => $bus,
+            'pencarian'     => $pencarian,
+            'tanggalTampil' => Carbon::parse($pencarian['tanggal'])->locale('id')->translatedFormat('d F Y'),
+        ]);
+    }
+
+    public function kursi(Request $request, int $id): View
+    {
+        $pencarian = $request->validate($this->aturanPencarian());
+
+        $bus = Jadwal::untukTampilan($id, $pencarian['tanggal']);
+        $pencarian['asal']   = $bus['kota_asal'];
+        $pencarian['tujuan'] = $bus['kota_tujuan'];
+
+        return view('tiket.kursi', [
+            'bus'           => $bus,
+            'pencarian'     => $pencarian,
+            'tanggalTampil' => Carbon::parse($pencarian['tanggal'])->locale('id')->translatedFormat('d F Y'),
+        ]);
+    }
+
+    private function aturanPencarian(): array
+    {
+        return [
+            'asal'      => ['required', 'string', 'max:100'],
+            'tujuan'    => ['required', 'string', 'max:100'],
+            'tanggal'   => ['required', 'date', 'after_or_equal:today'],
+            'penumpang' => ['required', 'integer', 'min:1', 'max:5'],
+        ];
     }
 }

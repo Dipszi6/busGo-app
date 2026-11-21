@@ -34,4 +34,9 @@ class User extends Authenticatable
     {
         return $this->role === 'admin';
     }
+
+    public function pemesanan(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Pemesanan::class);
+    }
 }

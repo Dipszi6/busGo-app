@@ -13,7 +13,7 @@
 
         <div class="mt-6">
             <x-tiket.search-summary :asal="$pencarian['asal']" :tujuan="$pencarian['tujuan']" :tanggal="$tanggalTampil" :tanggal-raw="$pencarian['tanggal']"
-                :penumpang="$pencarian['penumpang']" />
+                :penumpang="$pencarian['penumpang']" :kota="$kota" />
         </div>
 
         <div class="mt-8 grid gap-6 lg:grid-cols-[17rem_1fr]">
@@ -26,9 +26,9 @@
 
                 <div class="mt-4 space-y-4">
                     @forelse ($hasil as $bus)
-                        <x-tiket.bus-card :nama="$bus['nama']" :kelas="$bus['kelas']" :fasilitas="$bus['fasilitas']" :href="route('tiket.detail', ['id' => $bus['id']] + $pencarian)" :berangkat="$bus['berangkat']"
-                            :tiba="$bus['tiba']" :asal="$pencarian['asal']" :tujuan="$pencarian['tujuan']" :durasi="$bus['durasi']"
-                            :harga="$bus['harga']" />
+                        <x-tiket.bus-card :nama="$bus['nama']" :kelas="$bus['kelas']" :fasilitas="$bus['fasilitas']" :href="route('tiket.detail', ['id' => $bus['id']] + $pencarian)"
+                            :berangkat="$bus['berangkat']" :tiba="$bus['tiba']" :asal="$pencarian['asal']" :tujuan="$pencarian['tujuan']"
+                            :durasi="$bus['durasi']" :harga="$bus['harga']" />
                     @empty
                         <div class="rounded-2xl bg-white p-8 text-center text-sm text-[#64756D]">
                             Tidak ada bus yang cocok. Coba ubah filter atau tanggal pencarian.

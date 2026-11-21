@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\View\View;
+use App\Models\Kota;
 
 class LandingController extends Controller
 {
@@ -14,6 +15,9 @@ class LandingController extends Controller
             ['nama' => 'First Class',     'deskripsi' => 'Pengalaman perjalanan premium',        'warna' => 'hijau'],
         ];
 
-        return view('landing', compact('armada'));
+        return view('landing', [
+            'armada' => $armada,
+            'kota'   => Kota::orderBy('nama')->pluck('nama'),
+        ]);
     }
 }

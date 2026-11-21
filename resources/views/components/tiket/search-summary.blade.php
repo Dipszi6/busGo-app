@@ -1,6 +1,6 @@
-@props(['asal', 'tujuan', 'tanggal', 'tanggalRaw', 'penumpang'])
+@props(['asal', 'tujuan', 'tanggal', 'tanggalRaw', 'penumpang', 'kota' => []])
 
-<div x-data="{ ubah: false }">
+<div x-data="{ ubah: @js($errors->any()) }">
 
     {{-- Ringkasan --}}
     <section x-show="!ubah" class="rounded-2xl bg-[#174E3F] p-5 text-white sm:p-6">
