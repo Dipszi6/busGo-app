@@ -7,7 +7,7 @@
     $no = 0;
 @endphp
 
-<section class="rounded-2xl bg-white p-6">
+<section class="rounded-2xl bg-white p-6" x-data>
     <h2 class="text-xl font-bold text-[#253C34]">Denah Kursi Bus</h2>
     <p class="mt-1 text-xs text-[#64756D]">{{ $nama }} &bull; Kapasitas {{ $kapasitas }} Kursi</p>
 

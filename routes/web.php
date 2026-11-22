@@ -4,6 +4,7 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\TiketController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PembayaranController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('home');
@@ -35,6 +36,17 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('id')->name('pemesanan.simpan');
     Route::get('/pemesanan/sukses/{kode}', [PemesananController::class, 'sukses'])
         ->name('pemesanan.sukses');
+    Route::get('/pembayaran/selesai', [PembayaranController::class, 'selesaiMidtrans'])
+        ->name('pembayaran.selesai.midtrans');
+    Route::get('/pembayaran/{kode}', [PembayaranController::class, 'bayar'])
+        ->name('pembayaran.bayar');
+    Route::get('/pembayaran/{kode}/gagal', [PembayaranController::class, 'gagal'])
+        ->name('pembayaran.gagal');
+    Route::get('/pembayaran/{kode}/selesai', [PembayaranController::class, 'selesai'])
+        ->name('pembayaran.selesai');
 });
+
+Route::post('/webhook/midtrans', [PembayaranController::class, 'webhook'])
+    ->name('webhook.midtrans');
 
 require __DIR__ . '/auth.php';

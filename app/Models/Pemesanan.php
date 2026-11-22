@@ -11,13 +11,23 @@ class Pemesanan extends Model
 {
     protected $table = 'pemesanan';
 
-    protected $fillable = ['kode', 'user_id', 'jadwal_id', 'tanggal_berangkat', 'total_harga', 'status'];
+    protected $fillable = [
+        'kode',
+        'user_id',
+        'jadwal_id',
+        'tanggal_berangkat',
+        'total_harga',
+        'status',
+        'snap_token',
+        'dibayar_pada'
+    ];
 
     protected function casts(): array
     {
         return [
             'tanggal_berangkat' => 'date',
             'total_harga'       => 'integer',
+            'dibayar_pada' => 'datetime',
         ];
     }
 
