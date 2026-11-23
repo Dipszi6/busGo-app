@@ -6,6 +6,10 @@ use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\ArmadaController;
+use App\Http\Controllers\Admin\JadwalController as AdminJadwalController;
+use App\Http\Controllers\Admin\OperasionalController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('home');
@@ -50,6 +54,30 @@ Route::middleware('auth')->group(function () {
         ->name('pemesanan.etiket');
     Route::get('/pemesanan/etiket/{kode}/pdf', [PemesananController::class, 'etiketPdf'])
         ->name('pemesanan.etiket.pdf');
+});
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/armada', [ArmadaController::class, 'index'])->name('armada.index');
+    Route::post('/armada', [ArmadaController::class, 'store'])->name('armada.store');
+    Route::put('/armada/{bus}', [ArmadaController::class, 'update'])->name('armada.update');
+    Route::delete('/armada/{bus}', [ArmadaController::class, 'destroy'])->name('armada.destroy');
+
+    Route::get('/jadwal', [AdminJadwalController::class, 'index'])->name('jadwal.index');
+    Route::post('/jadwal/terminal', [AdminJadwalController::class, 'storeTerminal'])->name('jadwal.terminal.store');
+    Route::post('/jadwal/rute', [AdminJadwalController::class, 'storeRute'])->name('jadwal.rute.store');
+    Route::post('/jadwal', [AdminJadwalController::class, 'storeJadwal'])->name('jadwal.store');
+    Route::patch('/jadwal/{jadwal}/toggle', [AdminJadwalController::class, 'toggleAktif'])->name('jadwal.toggle');
+    Route::delete('/jadwal/{jadwal}', [AdminJadwalController::class, 'destroyJadwal'])->name('jadwal.destroy');
+
+    Route::get('/pemesanan', [OperasionalController::class, 'pemesanan'])->name('pemesanan.index');
+    Route::get('/pemesanan/{pemesanan}', [OperasionalController::class, 'showPemesanan'])->name('pemesanan.show');
+    Route::patch('/pemesanan/{pemesanan}/status', [OperasionalController::class, 'updateStatusPemesanan'])->name('pemesanan.status');
+
+    Route::get('/pembayaran', [OperasionalController::class, 'pembayaran'])->name('pembayaran.index');
+    Route::get('/pelanggan', [OperasionalController::class, 'pelanggan'])->name('pelanggan.index');
+    Route::get('/laporan', [OperasionalController::class, 'laporan'])->name('laporan.index');
 });
 
 Route::post('/webhook/midtrans', [PembayaranController::class, 'webhook'])
