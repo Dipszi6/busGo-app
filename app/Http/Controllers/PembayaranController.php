@@ -16,7 +16,7 @@ class PembayaranController extends Controller
 {
     public function __construct(private MidtransService $midtrans) {}
 
-    public function bayar(Request $request, string $kode): View
+    public function bayar(Request $request, string $kode): View|RedirectResponse
     {
         $pemesanan = Pemesanan::with([
             'penumpang',
@@ -29,6 +29,14 @@ class PembayaranController extends Controller
             ->where('user_id', $request->user()->id)
             ->where('status', 'menunggu_pembayaran')
             ->firstOrFail();
+
+        if ($pemesanan->sudahKedaluwarsa()) {
+            $pemesanan->update(['status' => 'gagal']);
+
+            return redirect()
+                ->route('pembayaran.gagal', $pemesanan->kode)
+                ->with('error', 'Waktu pembayaran telah habis karena jadwal keberangkatan sudah lewat.');
+        }
 
         if (! $pemesanan->snap_token) {
             $pemesanan->update([
@@ -118,7 +126,6 @@ class PembayaranController extends Controller
             return redirect()->route('pembayaran.gagal', $orderId);
         }
 
-        // pending: kembali ke halaman sukses (menunggu pembayaran)
         return redirect()->route('pemesanan.sukses', $orderId);
     }
 

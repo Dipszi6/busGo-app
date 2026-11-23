@@ -73,7 +73,7 @@
                     class="rounded-xl bg-[#174E3F] px-8 py-3 text-sm font-bold text-white hover:bg-[#123d32] transition">
                     Lihat E-Tiket
                 </a>
-            @else
+            @elseif (!$pemesanan->sudahKedaluwarsa())
                 <a href="{{ route('pembayaran.bayar', $pemesanan->kode) }}"
                     class="rounded-xl bg-[#DF603F] px-8 py-3 text-sm font-bold text-white hover:bg-[#cb5436] transition">
                     Bayar Sekarang

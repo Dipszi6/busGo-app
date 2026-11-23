@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class Pemesanan extends Model
 {
@@ -53,5 +54,18 @@ class Pemesanan extends Model
         } while (static::where('kode', $kode)->exists());
 
         return $kode;
+    }
+
+    public function sudahKedaluwarsa(): bool
+    {
+        if ($this->status !== 'menunggu_pembayaran') {
+            return false;
+        }
+
+        $waktuBerangkat = Carbon::parse(
+            $this->tanggal_berangkat->toDateString() . ' ' . $this->jadwal->jam_berangkat
+        );
+
+        return $waktuBerangkat->isPast();
     }
 }
