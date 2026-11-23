@@ -69,7 +69,7 @@
             </a>
 
             @if ($pemesanan->status === 'lunas')
-                <a href="#"
+                <a href="{{ route('pemesanan.etiket', $pemesanan->kode) }}"
                     class="rounded-xl bg-[#174E3F] px-8 py-3 text-sm font-bold text-white hover:bg-[#123d32] transition">
                     Lihat E-Tiket
                 </a>

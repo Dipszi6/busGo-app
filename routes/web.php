@@ -44,6 +44,10 @@ Route::middleware('auth')->group(function () {
         ->name('pembayaran.gagal');
     Route::get('/pembayaran/{kode}/selesai', [PembayaranController::class, 'selesai'])
         ->name('pembayaran.selesai');
+    Route::get('/pemesanan/etiket/{kode}', [PemesananController::class, 'etiket'])
+        ->name('pemesanan.etiket');
+    Route::get('/pemesanan/etiket/{kode}/pdf', [PemesananController::class, 'etiketPdf'])
+        ->name('pemesanan.etiket.pdf');
 });
 
 Route::post('/webhook/midtrans', [PembayaranController::class, 'webhook'])

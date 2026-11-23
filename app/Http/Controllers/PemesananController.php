@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\View\View;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 
 class PemesananController extends Controller
@@ -175,6 +176,41 @@ class PemesananController extends Controller
             ->firstOrFail();
 
         return view('pemesanan.sukses', compact('pemesanan'));
+    }
+
+    public function etiket(Request $request, string $kode): View
+    {
+        $pemesanan = Pemesanan::with([
+            'penumpang',
+            'jadwal.rute.terminalAsal.kota',
+            'jadwal.rute.terminalTujuan.kota',
+            'jadwal.bus',
+        ])
+            ->where('kode', $kode)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'lunas')
+            ->firstOrFail();
+
+        return view('pemesanan.etiket', compact('pemesanan'));
+    }
+
+    public function etiketPdf(Request $request, string $kode)
+    {
+        $pemesanan = Pemesanan::with([
+            'penumpang',
+            'jadwal.rute.terminalAsal.kota',
+            'jadwal.rute.terminalTujuan.kota',
+            'jadwal.bus',
+        ])
+            ->where('kode', $kode)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'lunas')
+            ->firstOrFail();
+
+        $pdf = Pdf::loadView('pdf.etiket', compact('pemesanan'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('ETiket-' . $pemesanan->kode . '.pdf');
     }
 
     private function aturanPilihan(Request $request): array

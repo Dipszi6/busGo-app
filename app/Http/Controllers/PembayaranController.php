@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use App\Mail\ETiketMail;
+use Illuminate\Support\Facades\Mail;
 
 class PembayaranController extends Controller
 {
@@ -84,6 +86,16 @@ class PembayaranController extends Controller
                 'status'       => $status,
                 'dibayar_pada' => $status === 'lunas' ? now() : null,
             ]);
+
+            if ($status === 'lunas') {
+                try {
+                    Mail::to($pemesanan->user->email)->send(new ETiketMail($pemesanan));
+                } catch (\Throwable $e) {
+                    Log::error('Gagal mengirim email E-Tiket: ' . $e->getMessage(), [
+                        'kode' => $pemesanan->kode,
+                    ]);
+                }
+            }
         }
 
         return response()->json(['message' => 'OK']);
